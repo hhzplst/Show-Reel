@@ -14,30 +14,30 @@ svg {
 
 </style>
 <body>
-<script src="d3.v3.min.js"></script>
+<script src="https://d3js.org/d3.v4.js"></script>
 <script>
 
-var m = [20, 20, 30, 20],
-    w = 960 - m[1] - m[3],
-    h = 500 - m[0] - m[2];
+var m = [50, 20, 30, 40],
+    w = 1000 - m[1] - m[3],
+    h = 600 - m[0] - m[2];
 
-var x = d3.time.scale().range([0, w - 60]),
-    y = d3.scale.linear().range([h / 4 - 20, 0]);
+var x = d3.scaleLinear().rangeRound([0, w - 60]),
+    y = d3.scaleLinear().rangeRound([h, 0]);
 
-var color = d3.scale.category10();
+var color = d3.scaleOrdinal(d3.schemeCategory10);
 
 var svg = d3.select("body").append("svg")
     .attr("width", w + m[1] + m[3])
-    .attr("height", h + m[0] + m[2]);
-  // .append("g")
-  //   .attr("transform", "translate(" + m[3] + "," + m[0] + ")");
+    .attr("height", h + m[0] + m[2])
+  .append("g")
+    .attr("transform", "translate(" + m[3] + "," + m[0] + ")");
 
 
 // A line generator, for the dark stroke.
-var line = d3.svg.line()
-    .interpolate("basis")
+var line = d3.line()
     .x(function(d) { return x(d.doy); })
-    .y(function(d) { return y(d.fls); });
+    .y(function(d) { return y(d.fls); })
+    // .curve(d3.curveLinear);
 
 // // A line generator, for the dark stroke.
 // var axis = d3.svg.line()
@@ -46,8 +46,8 @@ var line = d3.svg.line()
 //     .y(h);
 
 // A area generator, for the dark stroke.
-var area = d3.svg.area()
-    .interpolate("basis")
+var area = d3.area()
+    // .curve(d3.curveLinear)
     .x(function(d) { return x(d.doy); })
     .y0(h)
     .y1(function(d) { return y(d.fls); });
@@ -58,7 +58,7 @@ d3.csv("test.csv", function(data) {
   // Nest stock values by symbol.
   symbols = d3.nest()
       .key(function(d) { return d.symbol; })
-      .entries(tests = data);
+      .entries(data);
 
   // Parse dates and numbers. 
   // Also compute the maximum price per symbol, needed for the y-domain.
@@ -76,9 +76,7 @@ d3.csv("test.csv", function(data) {
     d3.max(symbols, function(d) { return d.values[d.values.length - 1].doy; })
   ]);
 
-  y
-      .domain([0, d3.max(symbols.map(function(d) { return d.maxFls; }))])
-      .range([h, 0]);
+  y.domain([0, d3.max(symbols.map(function(d) { return d.maxFls; }))])
 
   var g = svg.selectAll("g")
       .data(symbols)
@@ -102,8 +100,6 @@ d3.csv("test.csv", function(data) {
     //  .style("fill", color(d.key))
     //  .style("fill-opacity", 1e-6);
 
-    console.log(data);
-
     e.selectAll(".area")
         .data(d3.range(3))
       .enter().append("path")
@@ -111,12 +107,27 @@ d3.csv("test.csv", function(data) {
         .attr("d", area(d.values))
         .style("fill", color(d.key))
         .style("fill-opacity", 1e-6);
+
   });
 
 
   g.select(".area")
       .style("fill-opacity", 0.5)
       // .attr("d", function(d) { return area(d.values); });
+
+  svg.append("g")
+     .attr("transform", "translate(0, " + h + ")")
+     .call(d3.axisBottom(x));
+  
+  svg.append("g")
+   .call(d3.axisLeft(y))
+   .append("text")
+   .attr("fill", "#000")
+   .attr("transform", "rotate(-90)")
+   .attr("y", 6)
+   .attr("dy", "0.71em")
+   .attr("text-anchor", "end")
+   .text("Fls (#)");
 
 });
 </script>
