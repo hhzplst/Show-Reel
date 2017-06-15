@@ -19,7 +19,7 @@ svg {
 
 var m = [50, 20, 30, 40],
     w = 1000 - m[1] - m[3],
-    h = 600 - m[0] - m[2];
+    h = 900 - m[0] - m[2];
 
 var x = d3.scaleLinear().rangeRound([0, w - 60]),
     y = d3.scaleLinear().rangeRound([h, 0]);
@@ -58,13 +58,18 @@ d3.csv("test.csv", function(data) {
   // Nest stock values by symbol.
   symbols = d3.nest()
       .key(function(d) { return d.symbol; })
+      .key(function(d) { return d.doy; })
+      .rollup(function(v) {return d3.sum(v, function(d) {return d.fls; })})
       .entries(data);
+
 
   // Parse dates and numbers. 
   // Also compute the maximum price per symbol, needed for the y-domain.
   symbols.forEach(function(s) {
-    s.values.sort(function(a,b) {return a.doy - b.doy; });
-    s.values.forEach(function(d) { d.fls = +d.fls; });
+    // s.values.sort(function(a,b) {return a.doy - b.doy; });
+    s.values.sort(function(a,b) {return a.key - b.key; });
+    // s.values.forEach(function(d) { d.fls = +d.fls; });
+    s.values.forEach(function(d) { d.doy = d.key; d.fls = d.value; });
     s.maxFls = d3.max(s.values, function(d) { return d.fls; });
   });
 
@@ -76,7 +81,7 @@ d3.csv("test.csv", function(data) {
     d3.max(symbols, function(d) { return d.values[d.values.length - 1].doy; })
   ]);
 
-  y.domain([0, d3.max(symbols.map(function(d) { return d.maxFls; }))])
+  y.domain([0, d3.max(symbols.map(function(d) { return d.maxFls; })) + 500])
 
   var g = svg.selectAll("g")
       .data(symbols)
@@ -84,14 +89,16 @@ d3.csv("test.csv", function(data) {
       .attr("class", "symbol");
 
   g.each(function(d) {
+
     console.log(d);
+    
     var e = d3.select(this);
 
     e.append("text")
         .attr("x", 12)
         .attr("dy", ".31em")
         .text(d.key)
-        .attr("transform", function(d) { return "translate(" + (w - 60) + "," + (h - d.maxFls) + ")"; });
+        .attr("transform", function(d) { return "translate(" + (w - 60) + "," + (h - d.maxFls / 4) + ")"; });
 
     // e.append("g")
     //  .append("path")
@@ -99,6 +106,7 @@ d3.csv("test.csv", function(data) {
     //  .attr("d", area(d.values))
     //  .style("fill", color(d.key))
     //  .style("fill-opacity", 1e-6);
+
 
     e.selectAll(".area")
         .data(d3.range(3))
