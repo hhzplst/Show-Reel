@@ -1,1 +1,1 @@
-<?php header( 'Location: /show-reel.html' ) ;  ?>
+<?php header( 'Location: /index.html' ) ;  ?>
