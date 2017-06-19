@@ -17,9 +17,11 @@ svg {
 <script src="https://d3js.org/d3.v4.js"></script>
 <script>
 
+var TOT_2015, TOT_2016;
+
 var m = [50, 20, 30, 40],
     w = 1000 - m[1] - m[3],
-    h = 900 - m[0] - m[2];
+    h = 500 - m[0] - m[2];
 
 var x = d3.scaleLinear().rangeRound([0, w - 60]),
     y = d3.scaleLinear().rangeRound([h, 0]);
@@ -37,76 +39,71 @@ var svg = d3.select("body").append("svg")
 var line = d3.line()
     .x(function(d) { return x(d.doy); })
     .y(function(d) { return y(d.fls); })
-    // .curve(d3.curveLinear);
-
-// // A line generator, for the dark stroke.
-// var axis = d3.svg.line()
-//     .interpolate("basis")
-//     .x(function(d) { return x(d.doy); })
-//     .y(h);
-
+ 
 // A area generator, for the dark stroke.
-var area = d3.area()
-    // .curve(d3.curveLinear)
-    .x(function(d) { return x(d.doy); })
-    .y0(h)
-    .y1(function(d) { return y(d.fls); });
+ var area = d3.area()
+     .x(function(d) { return x(d.doy); })
+     .y0(h)
+     .y1(function(d) { return y(d.fls / TOT_2015); });
 
-var symbols;
+
+
+var years;
 
 d3.csv("test.csv", function(data) {
   // Nest stock values by symbol.
-  symbols = d3.nest()
+  years = d3.nest()
+      .key(function(d) { return d.year; })
       .key(function(d) { return d.symbol; })
       .key(function(d) { return d.doy; })
       .rollup(function(v) {return d3.sum(v, function(d) {return d.fls; })})
       .entries(data);
 
-
   // Parse dates and numbers. 
   // Also compute the maximum price per symbol, needed for the y-domain.
-  symbols.forEach(function(s) {
-    // s.values.sort(function(a,b) {return a.doy - b.doy; });
-    s.values.sort(function(a,b) {return a.key - b.key; });
-    // s.values.forEach(function(d) { d.fls = +d.fls; });
-    s.values.forEach(function(d) { d.doy = d.key; d.fls = d.value; });
-    s.maxFls = d3.max(s.values, function(d) { return d.fls; });
+  years.forEach(function(y) {
+    totalFls = 0;
+    y.values.forEach(function(symbol) {
+      tempTotal = 0;
+      symbol.values.forEach(function(e) {
+        e.fls = +e.value; 
+        e.doy = e.key;
+        totalFls += e.fls;
+        tempTotal += e.fls; 
+      })
+      symbol.scale = tempTotal;
+      symbol.values.sort(function(a, b) { return a.doy - b.doy; } )
+      
+    });
+    y.total = totalFls; 
+    // console.log(y);
   });
 
+  TOT_2015 = years[0].total;
+  TOT_2016 = years[1].total;
+
   // Sort by maximum price, descending.
-  symbols.sort(function(a, b) { return b.maxFls - a.maxFls; });
+  // symbols.sort(function(a, b) { return b.maxFls - a.maxFls; });
 
-  x.domain([
-    d3.min(symbols, function(d) { return d.values[0].doy; }),
-    d3.max(symbols, function(d) { return d.values[d.values.length - 1].doy; })
-  ]);
+  x.domain([60, 190]);
+  y.domain([0, 0.35]);
 
-  y.domain([0, d3.max(symbols.map(function(d) { return d.maxFls; })) + 500])
+  var yr15 = years[0], yr16 = years[1]; 
 
   var g = svg.selectAll("g")
-      .data(symbols)
+      .data(yr15.values)
     .enter().append("g")
       .attr("class", "symbol");
 
   g.each(function(d) {
-
     console.log(d);
-    
     var e = d3.select(this);
 
     e.append("text")
         .attr("x", 12)
         .attr("dy", ".31em")
         .text(d.key)
-        .attr("transform", function(d) { return "translate(" + (w - 60) + "," + (h - d.maxFls / 4) + ")"; });
-
-    // e.append("g")
-    //  .append("path")
-    //  .datum(data)
-    //  .attr("d", area(d.values))
-    //  .style("fill", color(d.key))
-    //  .style("fill-opacity", 1e-6);
-
+        .attr("transform", function(d) { return "translate(" + (w - 60) + "," + (h  - d.scale / 10) + ")"; });
 
     e.selectAll(".area")
         .data(d3.range(3))
