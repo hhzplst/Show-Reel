@@ -12,160 +12,178 @@ svg {
   stroke-width: 2px;
 }
 
+form {
+  position: absolute;
+  right: 10px;
+  top: 10px;
+}
+
 </style>
 <body>
-<script src="https://d3js.org/d3.v4.js"></script>
-<script>
+  <form>
+    <label><input type="radio" name="dataset" value="2015" checked> 2015</label>
+    <label><input type="radio" name="dataset" value="2016"> 2016</label>
+  </form>
+  <script src="https://d3js.org/d3.v4.js"></script>
+  <script type="text/javascript">
 
-var TOT_2015, TOT_2016;
+  var TOT_2015, TOT_2016;
 
-var m = [50, 20, 30, 40],
-    w = 1000 - m[1] - m[3],
-    h = 500 - m[0] - m[2];
+  var m = [50, 20, 30, 40],
+      w = 1000 - m[1] - m[3],
+      h = 500 - m[0] - m[2];
 
-var x = d3.scaleLinear().rangeRound([0, w - 60]),
-    y = d3.scaleLinear().rangeRound([h, 0]);
+  var x = d3.scaleLinear().rangeRound([0, w - 60]),
+      y = d3.scaleLinear().rangeRound([h, 0]);
 
-var color = d3.scaleOrdinal(d3.schemeCategory10);
+  var color = d3.scaleOrdinal(d3.schemeCategory10);
 
-var svg = d3.select("body").append("svg")
-    .attr("width", w + m[1] + m[3])
-    .attr("height", h + m[0] + m[2])
-  .append("g")
-    .attr("transform", "translate(" + m[3] + "," + m[0] + ")");
-
-
-// A line generator, for the dark stroke.
-var line = d3.line()
-    .x(function(d) { return x(d.doy); })
-    .y(function(d) { return y(d.fls); })
- 
-// A area generator, for the dark stroke.
- var area = d3.area()
-     .x(function(d) { return x(d.doy); })
-     .y0(h)
-     .y1(function(d) { return y(d.fls / TOT_2015); });
+  var svg = d3.select("body").append("svg")
+      .attr("width", w + m[1] + m[3])
+      .attr("height", h + m[0] + m[2])
+    .append("g")
+      .attr("transform", "translate(" + m[3] + "," + m[0] + ")");
 
 
+  // // A line generator, for the dark stroke.
+  // var line = d3.line()
+  //     .x(function(d) { return x(d.doy); })
+  //     .y(function(d) { return y(d.fls); })
+   
+  // A area generator, for the dark stroke.
+   var area = d3.area()
+       .x(function(d) { return x(d.doy); })
+       .y0(h)
+       .y1(function(d) { return y(d.fls/d.ttl); });
 
-var years;
+  var years;
 
-d3.csv("test.csv", function(data) {
-  // Nest stock values by symbol.
-  years = d3.nest()
-      .key(function(d) { return d.year; })
-      .key(function(d) { return d.symbol; })
-      .key(function(d) { return d.doy; })
-      .rollup(function(v) {return d3.sum(v, function(d) {return d.fls; })})
-      .entries(data);
+  d3.csv("test.csv", function(data) {
+    // Nest stock values by symbol.
+    years = d3.nest()
+        .key(function(d) { return d.year; })
+        .key(function(d) { return d.symbol; })
+        .key(function(d) { return d.doy; })
+        .rollup(function(v) {return d3.sum(v, function(d) {return d.fls; })})
+        .entries(data);
 
-  // Parse dates and numbers. 
-  // Also compute the maximum price per symbol, needed for the y-domain.
-  years.forEach(function(y) {
-    totalFls = 0;
-    y.values.forEach(function(symbol) {
-      tempTotal = 0;
-      symbol.values.forEach(function(e) {
-        e.fls = +e.value; 
-        e.doy = e.key;
-        totalFls += e.fls;
-        tempTotal += e.fls; 
-      })
-      symbol.scale = tempTotal;
-      symbol.values.sort(function(a, b) { return a.doy - b.doy; } )
-      
+    // Parse dates and numbers. 
+    // Also compute the maximum price per symbol, needed for the y-domain.
+    years.forEach(function(y) {
+      console.log(y);
+      totalFls = 0;
+      y.values.forEach(function(symbol) {
+        tempTotal = 0;
+        symbol.values.forEach(function(e) {
+          e.fls = +e.value; 
+          e.doy = e.key;
+          totalFls += e.fls;
+          tempTotal += e.fls; 
+        })
+        symbol.scale = tempTotal;
+        symbol.values.sort(function(a, b) { return a.doy - b.doy; })
+        
+      });
+      y.total = totalFls; 
+      y.values.sort(function(a, b) { return a.scale - b.scale; })
     });
-    y.total = totalFls; 
-    // console.log(y);
-  });
 
-  TOT_2015 = years[0].total;
-  TOT_2016 = years[1].total;
+    years.forEach(function(y) {
+      y.values.forEach(function(symbol) {
+        cur = symbol.scale;
+        symbol.values.forEach(function(e) {
+          e.ttl = cur;
+        })
+      })
+    })
 
-  // Sort by maximum price, descending.
-  // symbols.sort(function(a, b) { return b.maxFls - a.maxFls; });
+    TOT_2015 = years[0].total;
+    TOT_2016 = years[1].total;
 
-  x.domain([60, 190]);
-  y.domain([0, 0.35]);
+    // Sort by maximum price, descending.
+    // symbols.sort(function(a, b) { return b.maxFls - a.maxFls; });
 
-  var yr15 = years[0], yr16 = years[1]; 
+    x.domain([60, 190]);
+    y.domain([0, 1]);
 
-  var g = svg.selectAll("g")
-      .data(yr15.values)
-    .enter().append("g")
-      .attr("class", "symbol");
+    var yr15 = years[0], yr16 = years[1]; 
 
-  g.each(function(d, i) {  
-    var e = d3.select(this);
-    // e.append("text")
-    //     .attr("x", 12)
-    //     .attr("dy", ".31em")
-    //     .text(d.key)
-    //     .attr("transform", function(d) { return "translate(" + (w - 60) + "," + (h  - d.scale / 10) + ")"; });
+    var g = svg.selectAll("g")
+        .data(yr15.values)
+      .enter().append("g")
+        .attr("class", "symbol");
 
-    e.selectAll(".area")
-        .data(d3.range(3))
-      .enter().append("path")
-        .attr("class", "area")
-        .attr("d", area(d.values))
-        .style("fill", color(d.key))
-        .style("fill-opacity", 1e-6);
-  });
+    g.each(function(d, i) {  
+      var e = d3.select(this);
+      // e.append("text")
+      //     .attr("x", 12)
+      //     .attr("dy", ".31em")
+      //     .text(d.key)
+      //     .attr("transform", function(d) { return "translate(" + (w - 60) + "," + (h  - d.scale / 10) + ")"; });
 
-  g.select(".area")
-      .style("fill-opacity", 0.5);
+      e.selectAll(".area")
+          .data(d3.range(3))
+        .enter().append("path")
+          .attr("class", "area")
+          .attr("d", area(d.values))
+          .style("fill", color(d.key))
+          .style("fill-opacity", 1e-6);
+    });
 
-  var legend = svg.append("g")
-                .selectAll("g")
-                .data(yr15.values)
-                .enter().append("g")
-                .attr("class", "legend")
-                .attr("transform", function(d, i) { return "translate(" + (w - 150) + "," + i * 30 + ")"; });
-
-  legend.append("rect")
-        .attr("width", 18)
-        .attr("height", 18)
-        .style("fill", function(d) { return color(d.key) })
-        .style("fill-opacity", 1e-6)
+    g.select(".area")
         .style("fill-opacity", 0.5);
 
-   legend.append("text")
-         .attr("x", 24)
-         .attr("y", 9)
-         .attr("dy", ".35em")
-         .text(function(d) { return d.key; });
+    var legend = svg.append("g")
+                  .selectAll("g")
+                  .data(yr15.values)
+                  .enter().append("g")
+                  .attr("class", "legend")
+                  .attr("transform", function(d, i) { return "translate(" + (w - 150) + "," + i * 30 + ")"; });
+
+    legend.append("rect")
+          .attr("width", 18)
+          .attr("height", 18)
+          .style("fill", function(d) { return color(d.key) })
+          .style("fill-opacity", 1e-6)
+          .style("fill-opacity", 0.5);
+
+     legend.append("text")
+           .attr("x", 24)
+           .attr("y", 9)
+           .attr("dy", ".35em")
+           .text(function(d) { return d.key; });
 
 
-  
-      // .attr("d", function(d) { return area(d.values); });
+    
+        // .attr("d", function(d) { return area(d.values); });
 
-  svg.append("g")
-     .attr("transform", "translate(0, " + h + ")")
-     // 
-     .call(d3.axisBottom(x))
+    svg.append("g")
+       .attr("transform", "translate(0, " + h + ")")
+       .call(d3.axisBottom(x))
+       .append("text")
+       .attr("fill", "#000")
+       .attr("x", w - 70)
+       .attr("y", -5)
+       .text("Doy");
+       
+    
+    svg.append("g")
+     .call(d3.axisLeft(y))
      .append("text")
      .attr("fill", "#000")
-     .attr("x", w - 70)
-     .attr("y", -5)
-     .text("Doy");
-     
-  
-  svg.append("g")
-   .call(d3.axisLeft(y))
-   .append("text")
-   .attr("fill", "#000")
-   .attr("transform", "rotate(-90)")
-   .attr("y", 6)
-   .attr("dy", "0.71em")
-   .attr("text-anchor", "end")
-   .text("#Fls/#Total");
+     .attr("transform", "rotate(-90)")
+     .attr("y", 6)
+     .attr("dy", "0.71em")
+     .attr("text-anchor", "end")
+     .text("#Fls/#Total");
 
-  // svg.append("g")
-  //   .attr("class", "legend")
-  //   .attr("transform", "translate(50, 30)")
-  //   .style("font-size", "12px")
-  // .selectAll("g").data(yr15.values)
-  //   .enter().append("g")
+    // svg.append("g")
+    //   .attr("class", "legend")
+    //   .attr("transform", "translate(50, 30)")
+    //   .style("font-size", "12px")
+    // .selectAll("g").data(yr15.values)
+    //   .enter().append("g")
 
-});
+  });
+
 </script>
