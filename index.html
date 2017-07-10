@@ -64,7 +64,7 @@ form {
         .key(function(d) { return d.year; })
         .key(function(d) { return d.symbol; })
         .key(function(d) { return d.doy; })
-        .rollup(function(v) {return d3.sum(v, function(d) {return d.fls; })})
+        .rollup(function(v) {return d3.sum(v, function(d) {return d.fls; });})
         .entries(data);
 
     // Parse dates and numbers. 
@@ -79,13 +79,13 @@ form {
           e.doy = e.key;
           totalFls += e.fls;
           tempTotal += e.fls; 
-        })
+        });
         symbol.scale = tempTotal;
-        symbol.values.sort(function(a, b) { return a.doy - b.doy; })
+        symbol.values.sort(function(a, b) { return a.doy - b.doy; });
         
       });
       y.total = totalFls; 
-      y.values.sort(function(a, b) { return a.scale - b.scale; })
+      y.values.sort(function(a, b) { return a.scale - b.scale; });
     });
 
     years.forEach(function(y) {
@@ -93,9 +93,9 @@ form {
         cur = symbol.scale;
         symbol.values.forEach(function(e) {
           e.ttl = cur;
-        })
-      })
-    })
+        });
+      });
+    });
 
     x.domain([60, 190]);
     y.domain([0, 1]);
@@ -108,22 +108,19 @@ form {
     var yr15 = years[0], yr16 = years[1]; 
 
     function change() {
+      var s;
       year = this.value;
       if(year === "2015") {
-        var s = svg.selectAll(".symbol")
-                  .data(yr15.values)
-        s.each(function(d) {
-          d3.select(this).selectAll(".area")
-            .attr("d", area(d.values));
-        })
+        s = svg.selectAll(".symbol")
+                  .data(yr15.values);
        } else if(year === "2016") {
-        var s = svg.selectAll(".symbol")
-                  .data(yr16.values)
-        s.each(function(d) {
-          d3.select(this).selectAll(".area")
-            .attr("d", area(d.values));
-        })
-      } 
+         s = svg.selectAll(".symbol")
+                  .data(yr16.values);
+      }
+      s.each(function(d) {
+        d3.select(this).selectAll(".area")
+          .attr("d", area(d.values));
+      }); 
     }
 
     var g = svg.selectAll("g")
@@ -133,6 +130,8 @@ form {
 
     g.each(function(d, i) {  
       var e = d3.select(this);
+
+      e.attr("id", d.key);
       // e.append("text")
       //     .attr("x", 12)
       //     .attr("dy", ".31em")
@@ -146,6 +145,7 @@ form {
           .attr("d", area(d.values))
           .style("fill", color(d.key))
           .style("fill-opacity", 1e-6);
+
     });
 
     g.select(".area")
@@ -161,7 +161,7 @@ form {
     legend.append("rect")
           .attr("width", 18)
           .attr("height", 18)
-          .style("fill", function(d) { return color(d.key) })
+          .style("fill", function(d) { return color(d.key); })
           .style("fill-opacity", 1e-6)
           .style("fill-opacity", 0.5);
 
@@ -169,7 +169,14 @@ form {
            .attr("x", 24)
            .attr("y", 9)
            .attr("dy", ".35em")
-           .text(function(d) { return d.key; });
+           .text(function(d) { return d.key; })
+           .on("click", function(d){
+              var isDisplay = d3.select("#" + d.key).attr("display");
+              if(!isDisplay)
+                d3.select("#" + d.key).attr("display", "none");
+              else
+                d3.select("#" + d.key).attr("display", null);
+           });
 
 
     
